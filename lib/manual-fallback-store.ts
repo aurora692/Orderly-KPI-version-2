@@ -1,0 +1,56 @@
+import { mkdir, readFile, writeFile } from "fs/promises";
+import path from "path";
+import { AdminEntryInput } from "@/lib/types";
+
+type MarketShareFallback = {
+  current: number;
+  delta: number;
+  trend: number[];
+  source: "manual" | "auto";
+};
+
+type ManualFallbackData = {
+  updatedAt?: string;
+  marketShare?: MarketShareFallback;
+};
+
+const STORE_FILE = process.env.VERCEL
+  ? path.join("/tmp", "manual-fallback.json")
+  : path.join(process.cwd(), "data", "manual-fallback.json");
+
+export async function readManualFallback(): Promise<ManualFallbackData> {
+  try {
+    const raw = await readFile(STORE_FILE, "utf8");
+    const parsed = JSON.parse(raw) as ManualFallbackData;
+    return parsed ?? {};
+  } catch {
+    return {};
+  }
+}
+
+async function writeManualFallback(data: ManualFallbackData): Promise<void> {
+  await mkdir(path.dirname(STORE_FILE), { recursive: true });
+  await writeFile(STORE_FILE, `${JSON.stringify(data, null, 2)}\n`, "utf8");
+}
+
+export async function persistManualFallbackFromEntry(payload: Partial<AdminEntryInput>): Promise<void> {
+  const current = await readManualFallback();
+
+  if (payload.market_share_current === undefined && payload.market_share_trend === undefined) {
+    return;
+  }
+
+  const prev = current.marketShare;
+  const marketShare: MarketShareFallback = {
+    current: payload.market_share_current ?? prev?.current ?? 0,
+    delta: payload.market_share_delta ?? prev?.delta ?? 0,
+    trend: payload.market_share_trend ?? prev?.trend ?? [],
+    source: payload.source ?? prev?.source ?? "manual"
+  };
+
+  await writeManualFallback({
+    ...current,
+    updatedAt: new Date().toISOString(),
+    marketShare
+  });
+}

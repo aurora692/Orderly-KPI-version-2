@@ -1,0 +1,69 @@
+# Orderly KPI Dashboard (PRD v3 Scaffold)
+
+This project is a Next.js dashboard starter based on `Orderly_KPI_Dashboard_PRD_v3` with:
+
+- Four KPI sections (DeFi, Token, Business, Ecosystem)
+- KPI cards with WoW deltas
+- Trend charts (Recharts)
+- `/admin` page with password-protected write endpoints
+- API route scaffolding for dashboard data, daily refresh, and Telegram weekly summary
+- Vercel cron configuration for daily refresh + Tuesday 9:00 UTC Telegram report
+
+## 1. Local setup
+
+1. Install Node.js 20 LTS.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Copy environment file:
+   ```bash
+   cp .env.example .env.local
+   ```
+4. Update `.env.local` values for your credentials.
+5. Start development server:
+   ```bash
+   npm run dev
+   ```
+6. Open [http://localhost:3000](http://localhost:3000).
+
+## 2. Current data behavior
+
+- The UI currently renders from `lib/mock-data.ts`.
+- `/api/admin/entries` validates payload and invalidates cache tag.
+- Replace route internals with real integrations:
+  - DefiLlama scrape/XHR fetch
+  - CoinMarketCap API fetch
+  - Metabase card API fetch
+  - Google Sheets writes/reads
+
+## 3. Step-by-step deployment on Vercel
+
+1. Push this project to GitHub.
+2. Create a new Vercel project and import the repository.
+3. In Vercel project settings, add all environment variables from `.env.example`.
+4. Ensure `DASHBOARD_BASIC_AUTH_ENABLED=true` in production for internal-only access.
+5. Deploy the `main` branch.
+6. After deployment, verify:
+   - `/` dashboard loads
+   - `/admin` accepts `ADMIN_PASSWORD`
+   - `/api/telegram/weekly-summary` returns success (or preview if Telegram vars missing)
+7. Confirm cron jobs in Vercel:
+   - Daily refresh: `0 1 * * *`
+   - Weekly Telegram summary: `0 9 * * 2` (Tuesday 9:00 UTC)
+
+## 4. Suggested next implementation tasks
+
+1. Add real data provider adapters in `lib/providers/*`.
+2. Persist daily snapshots to Google Sheets or Postgres.
+3. Compute WoW deltas from persisted history.
+4. Add robust scraping fallback and alerting.
+5. Add auth provider (NextAuth/SSO) for internal access.
+
+## 5. Useful routes
+
+- Dashboard JSON: `/api/dashboard`
+- Manual scrape trigger: `POST /api/admin/scrape`
+- Manual entry write: `POST /api/admin/entries`
+- Daily refresh trigger: `/api/cron/daily-refresh`
+- Weekly Telegram summary: `/api/telegram/weekly-summary`
