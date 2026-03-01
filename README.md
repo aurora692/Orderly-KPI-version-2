@@ -44,6 +44,9 @@ This project is a Next.js dashboard starter based on `Orderly_KPI_Dashboard_PRD_
   - `GOOGLE_SERVICE_ACCOUNT_KEY` is configured
   - Service account has Editor access to the sheet
 - Manual fallback is only used when Metabase market share fetch is unavailable, unless `FORCE_MANUAL_MARKET_SHARE=true`.
+- You can force DeFi/Ecosystem current cards to use sheet history instead of live fetch:
+  - `FORCE_HISTORY_DEFI=true`
+  - `FORCE_HISTORY_ECOSYSTEM=true`
 - If Google Sheets is unavailable, app falls back to local file storage.
 - Replace route internals with real integrations:
   - DefiLlama scrape/XHR fetch

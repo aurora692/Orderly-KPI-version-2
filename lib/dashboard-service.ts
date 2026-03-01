@@ -143,6 +143,8 @@ function applyHistoryOverlay(
 
 async function getDashboardDataUncached(): Promise<DashboardData> {
   const data: DashboardData = JSON.parse(JSON.stringify(mockDashboardData));
+  const forceHistoryDefi = process.env.FORCE_HISTORY_DEFI === "true";
+  const forceHistoryEcosystem = process.env.FORCE_HISTORY_ECOSYSTEM === "true";
 
   const [cmcData, metabaseMarketShare, defillamaData, orderlyDexData, history] = await Promise.all([
     fetchCmcOrderlyTokenData(),
@@ -229,8 +231,8 @@ async function getDashboardDataUncached(): Promise<DashboardData> {
   }
 
   applyHistoryOverlay(data, history, {
-    useHistoryForDefiCurrent: !defillamaData,
-    useHistoryForEcosystemCurrent: !orderlyDexData
+    useHistoryForDefiCurrent: forceHistoryDefi || !defillamaData,
+    useHistoryForEcosystemCurrent: forceHistoryEcosystem || !orderlyDexData
   });
 
   const fallback = await readManualFallback();
