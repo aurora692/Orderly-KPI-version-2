@@ -42,11 +42,19 @@ function parseTop3(payload: unknown): Array<{ name: string; volume30d: number }>
   return parsed.slice(0, 3);
 }
 
-function parseOrderlyRank(top3Plus: Array<{ name: string; volume30d: number }>, fullList: Array<{ name: string; volume30d: number }>): {
+function parseOrderlyRank(
+  orderlyName: string,
+  fullList: Array<{ name: string; volume30d: number }>
+): {
   rank?: number;
   volume?: number;
 } {
-  const orderlyIndex = fullList.findIndex((item) => item.name.toLowerCase().includes("orderly"));
+  const normalizedTarget = orderlyName.trim().toLowerCase();
+  const exactIndex = fullList.findIndex((item) => item.name.trim().toLowerCase() === normalizedTarget);
+  const orderlyIndex =
+    exactIndex >= 0
+      ? exactIndex
+      : fullList.findIndex((item) => item.name.trim().toLowerCase().includes(normalizedTarget));
   if (orderlyIndex < 0) return {};
   return {
     rank: orderlyIndex + 1,
@@ -59,6 +67,7 @@ export async function fetchDefiLlamaPerpsData(): Promise<DefiLlamaPerpsData | nu
     process.env.DEFILLAMA_OVERVIEW_URL ||
     "https://api.llama.fi/overview/derivatives?excludeTotalDataChart=false&excludeTotalDataChartBreakdown=true";
   const rankingsUrl = process.env.DEFILLAMA_RANKINGS_URL || "https://api.llama.fi/summary/derivatives";
+  const orderlyName = process.env.DEFILLAMA_ORDERLY_NAME || "Orderly";
 
   try {
     const [overviewRes, rankingRes] = await Promise.all([
@@ -74,7 +83,7 @@ export async function fetchDefiLlamaPerpsData(): Promise<DefiLlamaPerpsData | nu
     const rankingPayload = rankingRes.ok ? await rankingRes.json() : [];
 
     const weeklyPerpVolume =
-      pickNumber(overviewPayload, ["total24h", "total7d", "totalWeeklyVolume", "weeklyVolume"]) ??
+      pickNumber(overviewPayload, ["total7d", "totalWeeklyVolume", "weeklyVolume", "total24h"]) ??
       (() => {
         const chart = overviewPayload.totalDataChart;
         if (!Array.isArray(chart) || chart.length === 0) return undefined;
@@ -107,7 +116,7 @@ export async function fetchDefiLlamaPerpsData(): Promise<DefiLlamaPerpsData | nu
         .sort((a, b) => b.volume30d - a.volume30d);
     })();
 
-    const orderly = parseOrderlyRank(top3, fullList);
+    const orderly = parseOrderlyRank(orderlyName, fullList);
 
     return {
       weeklyPerpVolume,

@@ -29,13 +29,20 @@ function buildTrendFromHistory(points: Array<{ date: string; value?: number }>, 
   }));
 }
 
-function applyHistoryOverlay(data: DashboardData, history: Awaited<ReturnType<typeof readHistorySnapshots>>) {
+function applyHistoryOverlay(
+  data: DashboardData,
+  history: Awaited<ReturnType<typeof readHistorySnapshots>>,
+  options: {
+    useHistoryForDefiCurrent: boolean;
+    useHistoryForEcosystemCurrent: boolean;
+  }
+) {
   if (history.length === 0) return;
 
   const latest = history[history.length - 1];
   const previous = history.length > 1 ? history[history.length - 2] : undefined;
 
-  if (latest.total_perp_volume_7d !== undefined) {
+  if (latest.total_perp_volume_7d !== undefined && options.useHistoryForDefiCurrent) {
     const kpi = data.sections.defi.kpis.find((item) => item.id === "weekly-perp-volume");
     if (kpi) {
       kpi.value = formatMoney(latest.total_perp_volume_7d, 1);
@@ -55,7 +62,7 @@ function applyHistoryOverlay(data: DashboardData, history: Awaited<ReturnType<ty
     );
   }
 
-  if (latest.orderly_rank_30d !== undefined) {
+  if (latest.orderly_rank_30d !== undefined && options.useHistoryForDefiCurrent) {
     const kpi = data.sections.defi.kpis.find((item) => item.id === "orderly-rank");
     if (kpi) {
       kpi.value = asRank(latest.orderly_rank_30d);
@@ -73,7 +80,7 @@ function applyHistoryOverlay(data: DashboardData, history: Awaited<ReturnType<ty
     );
   }
 
-  if (latest.top3_name_1 && latest.top3_vol_1 !== undefined) {
+  if (latest.top3_name_1 && latest.top3_vol_1 !== undefined && options.useHistoryForDefiCurrent) {
     data.sections.defi.leaderboard = [
       { name: latest.top3_name_1, volume: formatMoney(latest.top3_vol_1, 1) },
       { name: latest.top3_name_2 ?? "", volume: formatMoney(latest.top3_vol_2 ?? 0, 1) },
@@ -81,7 +88,7 @@ function applyHistoryOverlay(data: DashboardData, history: Awaited<ReturnType<ty
     ].filter((row) => row.name);
   }
 
-  if (latest.total_dexs !== undefined) {
+  if (latest.total_dexs !== undefined && options.useHistoryForEcosystemCurrent) {
     const totalKpi = data.sections.ecosystem.kpis.find((item) => item.id === "total-dexs");
     if (totalKpi) {
       totalKpi.value = latest.total_dexs.toLocaleString();
@@ -93,7 +100,7 @@ function applyHistoryOverlay(data: DashboardData, history: Awaited<ReturnType<ty
     }
   }
 
-  if (latest.graduated_dexs !== undefined) {
+  if (latest.graduated_dexs !== undefined && options.useHistoryForEcosystemCurrent) {
     const gradKpi = data.sections.ecosystem.kpis.find((item) => item.id === "graduated-dexs");
     if (gradKpi) {
       gradKpi.value = latest.graduated_dexs.toLocaleString();
@@ -126,8 +133,12 @@ function applyHistoryOverlay(data: DashboardData, history: Awaited<ReturnType<ty
     );
   }
 
-  data.sections.defi.lastUpdated = `${latest.date}T00:00:00.000Z`;
-  data.sections.ecosystem.lastUpdated = `${latest.date}T00:00:00.000Z`;
+  if (options.useHistoryForDefiCurrent) {
+    data.sections.defi.lastUpdated = `${latest.date}T00:00:00.000Z`;
+  }
+  if (options.useHistoryForEcosystemCurrent) {
+    data.sections.ecosystem.lastUpdated = `${latest.date}T00:00:00.000Z`;
+  }
 }
 
 async function getDashboardDataUncached(): Promise<DashboardData> {
@@ -217,7 +228,10 @@ async function getDashboardDataUncached(): Promise<DashboardData> {
     data.asOf = orderlyDexData.fetchedAt;
   }
 
-  applyHistoryOverlay(data, history);
+  applyHistoryOverlay(data, history, {
+    useHistoryForDefiCurrent: !defillamaData,
+    useHistoryForEcosystemCurrent: !orderlyDexData
+  });
 
   const fallback = await readManualFallback();
   const shouldApplyManualMarketShare = !metabaseMarketShare || process.env.FORCE_MANUAL_MARKET_SHARE === "true";
